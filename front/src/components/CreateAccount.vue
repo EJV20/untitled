@@ -1,4 +1,5 @@
 <template>
+  <button @click="goToHelloWorld">Back to Hello World</button>
   <div class="create-account">
     <h1>Create Account</h1>
     <form @submit.prevent="submitForm">
@@ -33,6 +34,8 @@
 </template>
 
 <script>
+import { useRouter } from 'vue-router'
+
 export default {
   name: "CreateAccount",
   data() {
@@ -80,6 +83,10 @@ export default {
       } finally {
         this.loading = false; // Stop loading
       }
+    },
+    goToHelloWorld() {
+      const router = useRouter()
+      router.push('/')
     },
   },
 };

@@ -1,5 +1,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function goToCreateAccount() {
+  router.push('/create-account')
+}
 
 defineProps({
   msg: String,
@@ -26,6 +33,8 @@ onMounted(async () => {
 
 <template>
   <h1>{{ msg }}</h1>
+
+  <button @click="goToCreateAccount">Go to Create Account</button>
 
   <div class="card">
     <button type="button" @click="count++">count is {{ count }}</button>
