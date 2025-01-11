@@ -1,41 +1,63 @@
+use bcrypt::{hash, DEFAULT_COST};
 use serde::{Deserialize, Serialize};
 
-const HELLO_RESPONSE: &str = "Hello, World!";
-
-// Define the structure of the incoming request for account creation
 #[derive(Deserialize)]
 pub struct CreateAccountRequest {
-    username: String,
-    password: String,
+    pub username: String,
+    pub email: String,
+    pub password: String,
 }
 
-// Define the structure of the API response
 #[derive(Serialize)]
-pub struct ApiResponse {
-    success: bool,
-    message: String,
+pub struct CreateAccountResponse {
+    pub success: bool,
+    pub message: String,
 }
 
-// Helper method to create a new account
-pub fn create_account(req: CreateAccountRequest) -> ApiResponse {
-    if req.username.is_empty() || req.password.is_empty() {
-        // If invalid data, respond with an error
-        ApiResponse {
-            success: false,
-            message: "Username and password are required.".to_string(),
+pub async fn create_account(req: CreateAccountRequest) -> CreateAccountResponse {
+    // Get the connection pool
+    let pool = match crate::DB_POOL.get() {
+        Some(pool) => pool,
+        None => {
+            return CreateAccountResponse {
+                success: false,
+                message: "Database pool is not initialized.".to_string(),
+            };
         }
-    } else {
-        // Normally, you'd store this information in a database here
-        // Simulating account creation
-        println!(
-            "Account created: username = {}, password = (hidden)",
-            req.username
-        );
+    };
 
-        // Respond with success
-        ApiResponse {
-            success: true,
-            message: format!("Account created for username: {}", req.username),
+    let password_hash = match hash(req.password, DEFAULT_COST) {
+        Ok(hash) => hash,
+        Err(_) => {
+            return CreateAccountResponse {
+                success: false,
+                message: "Password hashing failed.".to_string(),
+            };
         }
+    };
+
+    // Insert into the database
+    let result = sqlx::query!(
+        r#"
+        INSERT INTO users (username, email, password)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        "#,
+        req.username,
+        req.email,
+        password_hash
+    ).fetch_one(pool)
+        .await;
+
+    match result {
+        Ok(_) => CreateAccountResponse {
+            success: true,
+            message: "Account created successfully.".into(),
+        },
+        Err(err) => CreateAccountResponse {
+            success: false,
+            message: format!("Failed to create account: {}", err),
+        },
     }
 }
+
